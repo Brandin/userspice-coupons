@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+  <name>Coupons</name>
+  <author>Brandin Arsenault</author>
+  <website>https://github.com/brandinarsenault/userspice-coupons</website>
+  <version>0.0.0</version>
+  <release>May 1, 2021</release>
+  <tested>5.3.1</tested>
+  <description>This plugin allows you to create coupons that have limited (or unlimited) uses and permission rewards for UserSpice 5.3+</description>
+  <button></button>
+</plugin>

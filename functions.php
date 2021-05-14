@@ -1,0 +1,234 @@
+<?php
+
+if (!function_exists('removeIndexPhp')) {
+    function removeIndexPhp()
+    {
+        if (strpos('https://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'], 'index.php')) {
+            Redirect::to(str_replace('index.php', '', 'https://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI']));
+        }
+    }
+}
+
+if (!function_exists('generateRelativeRedirect')) {
+    function generateRelativeRedirect($args = [], $placeholder = false)
+    {
+        //The $placeholder parameter is due to legacy code reasons, changing it at this time will do nothing
+        $redirectDir = '';
+        for ($i = 0; $i < count($args); ++$i) {
+            $redirectDir .= '../';
+        }
+
+        return $redirectDir;
+    }
+}
+
+if (!function_exists('parseUrl')) {
+    function parseUrl()
+    {
+        $url = str_replace('index.php', '', $_SERVER['PHP_SELF']);
+        $url = str_replace($url, '', $_SERVER['REQUEST_URI']);
+        $url = explode('/', $url);
+        $args = [];
+        foreach ($url as $val) {
+            if ($val == '') {
+                continue;
+            }
+            $args[] = urldecode($val);
+        }
+
+        return $args;
+    }
+}
+
+function Coupons_getCoupons($coupon = null)
+{
+    global $user, $db;
+    $return = [];
+    $return['state'] = false;
+
+    $userId = 1;
+    if ($user->isLoggedIn()) {
+        $userId = $user->data()->id;
+    }
+
+    if ($coupon == null) {
+        $db->query('SELECT c.* ,GROUP_CONCAT(cp.fkPermissionID) PermissionIds ,COUNT(DISTINCT ch.kCouponHistoryID) CouponUseCount FROM coupons c LEFT JOIN coupons_permissions cp ON cp.fkCouponID = c.kCouponID LEFT JOIN coupons_history ch on c.kCouponID = ch.fkCouponID GROUP BY c.kCouponID');
+        if (!$db->error()) {
+            if ($db->count() > 0) {
+                $return['state'] = true;
+                $return['data'] = $db->results();
+
+                return $return;
+            } else {
+                $return['error'] = 'db_no_results';
+
+                return $return;
+            }
+        } else {
+            logger($userId, 'Coupons_getCoupons', 'Failed to retrieve coupons', json_encode(['ERROR' => $db->errorString()]));
+            $return['error'] = 'db_error';
+
+            return $return;
+        }
+    } else {
+        $db->query('SELECT c.* ,GROUP_CONCAT(cp.fkPermissionID) PermissionIds ,COUNT(DISTINCT ch.kCouponHistoryID) CouponUseCount FROM coupons c LEFT JOIN coupons_permissions cp ON cp.fkCouponID = c.kCouponID LEFT JOIN coupons_history ch on c.kCouponID = ch.fkCouponID WHERE c.Coupon = ? GROUP BY c.kCouponID', [$coupon]);
+        if (!$db->error()) {
+            $count = $db->count();
+            if ($count == 1) {
+                $return['state'] = true;
+                $return['data'] = $db->first();
+
+                return $return;
+            } elseif ($count > 1) {
+                $return['error'] = 'db_too_many_results';
+
+                return $return;
+            } else {
+                $return['error'] = 'db_no_results';
+
+                return $return;
+            }
+        } else {
+            logger($userId, 'Coupons_getCoupons', "Failed to retrieve coupon {$coupon}", json_encode(['ERROR' => $db->errorString()]));
+            $return['error'] = 'db_error';
+
+            return $return;
+        }
+    }
+
+    $return['error'] = 'request_unhandled';
+
+    return $return;
+}
+
+function Coupons_generateCouponCode($length = 8)
+{
+    global $db, $user;
+    $return = [];
+    $return['state'] = false;
+
+    $userId = 1;
+    if ($user->isLoggedIn()) {
+        $userId = $user->data()->id;
+    }
+
+    $couponCode = null;
+    $attempts = 0;
+
+    while ($couponCode === null && $attempts < 5) {
+        ++$attempts;
+
+        $attempted = strtoupper(randomstring($length));
+        $db->query('SELECT Coupon Number FROM coupons WHERE Coupon = ?', [$attempted]);
+        if (!$db->error()) {
+            if ($db->count() == 0) {
+                $couponCode = $attempted;
+            }
+        } else {
+            logger($userId, 'generateCouponCode', "Failed to check Coupon Code {$attempted} against DB", json_encode(['ERROR' => $db->errorString()]));
+        }
+    }
+
+    if ($couponCode !== null) {
+        $return['state'] = true;
+        $return['data'] = $couponCode;
+    } else {
+        $return['error'] = 'failed_to_generate';
+    }
+
+    return $return;
+}
+
+function Coupons_expireCoupon($coupon = null, $all = false)
+{
+    global $db, $user;
+    $return = [];
+    $return['state'] = false;
+
+    if (!$user->isLoggedIn()) {
+        $return['error'] = 'not_logged_in';
+
+        return $return;
+    }
+
+    if ($coupon == null && $all) {
+        $db->query('UPDATE coupons SET CouponExpirationDate = NOW() WHERE CouponExpirationDate IS NULL OR CouponExpirationDate > NOW()');
+        if (!$db->error()) {
+            $count = $db->count();
+            if ($count == 1) {
+                logger($user->data()->id, 'Coupons_expireCoupon', "Expired {$count} Coupon");
+            } else {
+                logger($user->data()->id, 'Coupons_expireCoupon', "Expired {$count} Coupons");
+            }
+            $return['state'] = true;
+            $return['data'] = $count;
+
+            return $return;
+        } else {
+            logger($user->data()->id, 'Coupons_expireCoupon', 'Failed to Expire Coupons', json_encode(['ERROR' => $db->errorString()]));
+            $return['error'] = 'db_error';
+
+            return $return;
+        }
+    }
+
+    if ($coupon != null) {
+        $db->query('UPDATE coupons SET CouponExpirationDate = NOW() WHERE Coupon = ?', [$coupon]);
+        if (!$db->error()) {
+            logger($user->data()->id, 'Coupons_expireCoupon', "Expired Coupon {$coupon}");
+            $return['data'] = $db->count();
+
+            return $return;
+        } else {
+            logger($user->data()->id, 'Coupons_expireCoupon', "Failed to Expire Coupon {$coupon}", json_encode(['ERROR' => $db->errorString()]));
+            $return['error'] = 'db_error';
+
+            return $return;
+        }
+    }
+
+    $return['error'] = 'request_unhandled';
+
+    return $return;
+}
+
+function Coupons_validateCoupon($coupon)
+{
+    global $db, $user;
+    $return = [];
+    $return['state'] = false;
+
+    if (!$user->isLoggedIn()) {
+        $return['error'] = 'not_logged_in';
+
+        return $return;
+    }
+
+    $db->query('SELECT c.* FROM coupons c LEFT JOIN(SELECT fkCouponID,COUNT(kCouponHistoryID) CouponUseCount FROM coupons_history ch GROUP BY ch.fkCouponID) cu ON cu.fkCouponID = c.kCouponID WHERE c.Coupon = ? AND (c.CouponExpirationDate IS NULL OR c.CouponExpirationDate > NOW()) AND (c.CouponUseLimit IS NULL OR c.CouponUseLimit > cu.CouponUseCount)', [$coupon]);
+    if (!$db->error()) {
+        $count = $db->count();
+        if ($count == 1) {
+            $return['state'] = true;
+            $return['data'] = $db->first();
+
+            return $return;
+        } elseif ($count > 1) {
+            $return['error'] = 'db_too_many_results';
+
+            return $return;
+        } else {
+            $return['error'] = 'db_no_results';
+
+            return $return;
+        }
+    } else {
+        logger($user->data()->id, 'Coupons_validateCoupon', "Failed to validate coupon {$coupon}", json_encode(['ERROR' => $db->errorString()]));
+        $return['error'] = 'db_error';
+
+        return $return;
+    }
+
+    $return['error'] = 'request_unhandled';
+
+    return $return;
+}

@@ -1,6 +1,6 @@
 # UserSpice Coupons Plugin
 
-**IMPORTANT! THIS PLUGIN IS NOT PRODUCTION READY!**
+**This plugin is considered beta, please submit issues and requests here on GitHub.**
 
 This plugin allows you to generate and redeem coupons with permission levels or other integrations you wish to develop for your project.
 

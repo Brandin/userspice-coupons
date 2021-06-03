@@ -31,6 +31,15 @@ require_once $abs_us_root.$us_url_root.'users/includes/template/prep.php'; ?>
 <?php
 $errors = $successes = [];
 
+$form_valid = true;
+$post_bypass = false;
+$uri_coupon_code = null;
+
+$coupon_code_submit = false;
+if (Input::get('coupon_code_submit') == '1') {
+    $coupon_code_submit = true;
+}
+
 removeIndexPhp();
 $page = $args[0] ?? null;
 $relRed = generateRelativeRedirect($args, true);
@@ -83,9 +92,17 @@ if ($page == 'task') {
     }
 }
 
-$form_valid = true;
+if ($page == 'redeem') {
+    $uri_coupon_code = $args[1] ?? null;
+    if ($uri_coupon_code != '' && $uri_coupon_code != null) {
+        $post_bypass = $coupon_code_submit = true;
+    } else {
+        $uri_coupon_code = null;
+    }
+    $page = null;
+}
 
-if (isset($_POST)) {
+if (isset($_POST) || $post_bypass) {
     if (Input::get('coupon_submit') == '1') {
         $token = Input::get('csrf');
         $return_to_dashboard = Input::get('return_to_dashboard');
@@ -208,11 +225,16 @@ if (isset($_POST)) {
                 }
             }
         }
-    } elseif (Input::get('coupon_code_submit') == '1') {
-        $coupon_code = strtoupper(Input::get('coupon_code'));
+    } elseif ($coupon_code_submit) {
+        $coupon_code = Input::get('coupon_code');
+        if ($uri_coupon_code != null) {
+            $coupon_code = $uri_coupon_code;
+        }
+        $coupon_code = strtoupper($coupon_code);
         $validate_coupon = Coupons_validateCoupon($coupon_code);
         if ($validate_coupon['state']) {
             $validate_coupon = $validate_coupon['data'];
+            $permissions = explode(',', $validate_coupon->PermissionIds);
             $fields = [
             'fkCouponID' => $validate_coupon->kCouponID,
             'fkUserID' => $user->data()->id,
@@ -220,6 +242,27 @@ if (isset($_POST)) {
             $db->insert('coupons_history', $fields);
             if (!$db->error()) {
                 logger($user->data()->id, 'Coupons', "Redeemed Coupon {$coupon_code}");
+                foreach ($permissions as $perm) {
+                    if (!hasPerm($perm, null, false)) {
+                        $fields = [
+                        'user_id' => $user->data()->id,
+                        'permission_id' => $perm,
+                      ];
+                        $db->insert('user_permission_matches', $fields);
+                        if (!$db->error()) {
+                            $track_permission = Coupons_trackReward('Permission_Add', $perm);
+                            if ($track_permission['state']) {
+                                logger($user->data()->id, 'Coupons', "Added Permission #{$perm} to User");
+                            } else {
+                                logger($user->data()->id, 'Coupons', "[UNTRACKED] Added Permission #{$perm} to User");
+                            }
+                        } else {
+                            logger($user->data()->id, 'Coupons', "Failed to Add Permission #{$perm} to User", json_encode(['ERROR' => $db->errorString()]));
+                        }
+                    } else {
+                        logger($user->data()->id, 'Coupons', "Skipping Addition of Permission #{$perm} to User", json_encode(['ERROR' => 'user_has_perm']));
+                    }
+                }
                 $page = 'redeemed';
             } else {
                 logger($user->data()->id, 'Coupons', "Failed Redeeming Coupon {$coupon_code}", json_encode(['ERROR' => $db->errorString()]));
@@ -316,6 +359,7 @@ if ($page == null && !isset($action)) {
                         <?php } ?>
                       </td>
                       <td>
+                        <button class="btn btn-sm btn-secondary" data-clipboard-text="<?php echo str_replace('dashboard', 'redeem', explode('?', 'https://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'])[0]).$coupon->Coupon.'/'; ?>">Copy Redemption Link</button>
                         <button class="btn btn-sm btn-success" id="coupon_metadata" data-id="<?php echo $coupon->Coupon; ?>">Metadata</button>
                         <!-- <button class="btn btn-sm btn-success">Usage</button> -->
                         <a href='<?php echo "{$relRed}task/expire/{$coupon->Coupon}/"; ?>' class="btn btn-sm btn-danger">Expire</a>
@@ -425,9 +469,12 @@ if ($page == null && !isset($action)) {
 
 <?php require_once $abs_us_root.$us_url_root.'users/includes/html_footer.php'; ?>
 <?php if ($page == 'dashboard') { ?>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.8/clipboard.min.js" integrity="sha512-sIqUEnRn31BgngPmHt2JenzleDDsXwYO+iyvQ46Mw6RL+udAUZj2n/u/PGY80NxRxynO7R9xIGx5LEzw4INWJQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js" integrity="sha512-BkpSL20WETFylMrcirBahHfSnY++H2O1W+UnEEO4yNIl+jI2+zowyoGJpbtk6bx97fBXf++WJHSSK2MV4ghPcg==" crossorigin="anonymous"></script>
   <script>
   $(function () {
+    new ClipboardJS('.btn');
+
     main_div = $('main.container')
     main_div.removeClass('container');
     main_div.addClass('container-fluid');

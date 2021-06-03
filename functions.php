@@ -204,7 +204,7 @@ function Coupons_validateCoupon($coupon)
         return $return;
     }
 
-    $db->query('SELECT c.* FROM coupons c LEFT JOIN(SELECT fkCouponID,COUNT(kCouponHistoryID) CouponUseCount FROM coupons_history ch GROUP BY ch.fkCouponID) cu ON cu.fkCouponID = c.kCouponID WHERE c.Coupon = ? AND (c.CouponExpirationDate IS NULL OR c.CouponExpirationDate > NOW()) AND (c.CouponUseLimit IS NULL OR c.CouponUseLimit > cu.CouponUseCount)', [$coupon]);
+    $db->query('SELECT c.*, GROUP_CONCAT(cp.fkPermissionID) PermissionIds FROM coupons c LEFT JOIN coupons_permissions cp ON cp.fkCouponID = c.kCouponID LEFT JOIN(SELECT fkCouponID,COUNT(kCouponHistoryID) CouponUseCount FROM coupons_history ch GROUP BY ch.fkCouponID) cu ON cu.fkCouponID = c.kCouponID WHERE c.Coupon = ? AND (c.CouponExpirationDate IS NULL OR c.CouponExpirationDate > NOW()) AND (c.CouponUseLimit IS NULL OR c.CouponUseLimit > cu.CouponUseCount)', [$coupon]);
     if (!$db->error()) {
         $count = $db->count();
         if ($count == 1) {
@@ -229,6 +229,36 @@ function Coupons_validateCoupon($coupon)
     }
 
     $return['error'] = 'request_unhandled';
+
+    return $return;
+}
+
+function Coupons_trackReward($rewardType, $rewardId)
+{
+    global $db, $user;
+    $return = [];
+    $return['state'] = false;
+
+    if (!$user->isLoggedIn()) {
+        $return['error'] = 'not_logged_in';
+
+        return $return;
+    }
+
+    $fields = [
+    'RewardType' => $rewardType,
+    'RewardId' => $rewardId,
+  ];
+
+    $db->insert('coupons_rewards', $fields);
+    if (!$db->error()) {
+        logger($user->data()->id, 'Coupons_trackReward', 'Tracked Reward', json_encode(['DATA' => $fields]));
+        $return['state'] = true;
+    } else {
+        logger($user->data()->id, 'Coupons_trackReward', 'Failed to Track Reward', json_encode(['DATA' => $fields, 'ERROR' => $db->errorString()]));
+        $return['state'] = false;
+        $return['error'] = 'db_error';
+    }
 
     return $return;
 }

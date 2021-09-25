@@ -204,7 +204,7 @@ function Coupons_validateCoupon($coupon)
         return $return;
     }
 
-    $db->query('SELECT c.*, GROUP_CONCAT(cp.fkPermissionID) PermissionIds FROM coupons c LEFT JOIN coupons_permissions cp ON cp.fkCouponID = c.kCouponID LEFT JOIN(SELECT fkCouponID,COUNT(kCouponHistoryID) CouponUseCount FROM coupons_history ch GROUP BY ch.fkCouponID) cu ON cu.fkCouponID = c.kCouponID WHERE c.Coupon = ? AND (c.CouponExpirationDate IS NULL OR c.CouponExpirationDate > NOW()) AND (c.CouponUseLimit IS NULL OR c.CouponUseLimit > cu.CouponUseCount)', [$coupon]);
+    $db->query('SELECT c.*, GROUP_CONCAT(cp.fkPermissionID) PermissionIds FROM coupons c LEFT JOIN coupons_permissions cp ON cp.fkCouponID = c.kCouponID LEFT JOIN(SELECT fkCouponID, COUNT(ch.kCouponHistoryID) CouponUseCount FROM coupons_history ch GROUP BY ch.fkCouponID) cu ON cu.fkCouponID = c.kCouponID WHERE c.Coupon = ? AND(c.CouponExpirationDate IS NULL OR c.CouponExpirationDate > NOW()) AND (c.CouponUseLimit IS NULL OR cu.CouponUseCount IS NULL OR c.CouponUseLimit > cu.CouponUseCount)', [$coupon]);
     if (!$db->error()) {
         $count = $db->count();
         if ($count == 1) {

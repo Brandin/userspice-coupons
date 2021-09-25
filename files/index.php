@@ -243,6 +243,9 @@ if (isset($_POST) || $post_bypass) {
             if (!$db->error()) {
                 logger($user->data()->id, 'Coupons', "Redeemed Coupon {$coupon_code}");
                 foreach ($permissions as $perm) {
+                    if ($perm == '' || $perm == null) {
+                        continue;
+                    }
                     if (!hasPerm($perm, null, false)) {
                         $fields = [
                         'user_id' => $user->data()->id,

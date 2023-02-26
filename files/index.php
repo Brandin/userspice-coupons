@@ -273,24 +273,23 @@ if (isset($_POST) || $post_bypass) {
                                 logger($user->data()->id, 'Coupons', "[UNTRACKED] Added Permission #{$perm} to User");
                             }
                         } else {
-                            logger($user->data()->id, 'Coupons', "Failed to Add Permission #{$perm} to User", json_encode(['ERROR' => $db->errorString()]));
+                            logger($user->data()->id, 'Coupons', "Failed to Add Permission #{$perm} to User", ['ERROR' => $db->errorString()]);
                         }
                     } else {
-                        logger($user->data()->id, 'Coupons', "Skipping Addition of Permission #{$perm} to User", json_encode(['ERROR' => 'user_has_perm']));
+                        logger($user->data()->id, 'Coupons', "Skipping Addition of Permission #{$perm} to User", ['ERROR' => 'user_has_perm']);
                     }
                 }
                 $page = 'redeemed';
+                Coupons_onCouponRedeem($validate_coupon);
             } else {
-                logger($user->data()->id, 'Coupons', "Failed Redeeming Coupon {$coupon_code}", json_encode(['ERROR' => $db->errorString()]));
+                logger($user->data()->id, 'Coupons', "Failed Redeeming Coupon {$coupon_code}", ['ERROR' => $db->errorString()]);
                 $action = 'internal_error';
             }
         } else {
+            logger($user->data()->id, 'Coupons', "Failed Redeeming Coupon {$coupon_code}", ['ERROR' => $validate_coupon['error']]);
             switch ($validate_coupon['error']) {
                 case 'db_no_results':
                     $action = 'invalid_code';
-                    break;
-                case 'db_too_many_results':
-                    $action = 'internal_error';
                     break;
                 default:
                     $action = 'internal_error';

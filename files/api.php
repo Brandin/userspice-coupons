@@ -45,15 +45,15 @@ if ($request_type === 'GET') {
             handleSuccess(200, $coupon['data']);
         } else {
             switch ($coupon['error']) {
-              case 'db_no_results':
-                handleError(404, 'not_found');
-                break;
-              case 'db_too_many_results':
-                handleError(500, 'too_many_results');
-                break;
-              default:
-                handleError(500, 'internal_error');
-                break;
+                case 'db_no_results':
+                    handleError(404, 'not_found');
+                    break;
+                case 'db_too_many_results':
+                    handleError(500, 'too_many_results');
+                    break;
+                default:
+                    handleError(500, 'internal_error');
+                    break;
             }
         }
     }
@@ -62,4 +62,4 @@ if ($request_type === 'GET') {
 }
 
 handleError(500, 'request_unhandled');
-exit();
+exit;

@@ -12,7 +12,7 @@ if (!function_exists('removeIndexPhp')) {
 if (!function_exists('generateRelativeRedirect')) {
     function generateRelativeRedirect($args = [], $placeholder = false)
     {
-        //The $placeholder parameter is due to legacy code reasons, changing it at this time will do nothing
+        // The $placeholder parameter is due to legacy code reasons, changing it at this time will do nothing
         $redirectDir = '';
         for ($i = 0; $i < count($args); ++$i) {
             $redirectDir .= '../';

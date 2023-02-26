@@ -2,13 +2,13 @@
 
 require_once 'init.php';
 
-//For security purposes, it is MANDATORY that this page be wrapped in the following
-//if statement. This prevents remote execution of this code.
+// For security purposes, it is MANDATORY that this page be wrapped in the following
+// if statement. This prevents remote execution of this code.
 if (in_array($user->data()->id, $master_account)) {
     $db = DB::getInstance();
     include 'plugin_info.php';
 
-    //all actions should be performed here.
+    // all actions should be performed here.
     $checkQ = $db->query('SELECT * FROM us_plugins WHERE plugin = ?', [$plugin_name]);
     $checkC = $checkQ->count();
     if ($checkC > 0) {

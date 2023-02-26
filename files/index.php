@@ -6,11 +6,11 @@ $page = $args[0] ?? null;
 
 if ($page == 'api') {
     require_once 'api.php';
-    exit();
+    exit;
 }
 
 if (!securePage($_SERVER['PHP_SELF'])) {
-    exit();
+    exit;
 }
 
 require_once $abs_us_root.$us_url_root.'users/includes/template/prep.php'; ?>
@@ -273,16 +273,16 @@ if (isset($_POST) || $post_bypass) {
             }
         } else {
             switch ($validate_coupon['error']) {
-            case 'db_no_results':
-              $action = 'invalid_code';
-              break;
-            case 'db_too_many_results':
-              $action = 'internal_error';
-              break;
-            default:
-              $action = 'internal_error';
-              break;
-          }
+                case 'db_no_results':
+                    $action = 'invalid_code';
+                    break;
+                case 'db_too_many_results':
+                    $action = 'internal_error';
+                    break;
+                default:
+                    $action = 'internal_error';
+                    break;
+            }
         }
     }
 }
@@ -369,7 +369,7 @@ if ($page == null && !isset($action)) {
                       </td>
                     </tr>
                   <?php }
-                } else { ?>
+                    } else { ?>
                   <tr>
                     <td colspan="4">
                       No coupons found
@@ -441,7 +441,7 @@ if ($page == null && !isset($action)) {
             <br>
             <div id="permissions" class="permissions row hidden">
               <?php $permissions = fetchAllPermissions();
-              foreach ($permissions as $perm) { ?>
+        foreach ($permissions as $perm) { ?>
                 <div class="col col-md-4 col-xs-12">
                   <label>
                     <input type="checkbox" class="permissions" name="permissions[]" id="permissions[]" value="<?php echo $perm->id; ?>" />

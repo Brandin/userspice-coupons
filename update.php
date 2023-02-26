@@ -11,7 +11,7 @@ if (in_array($user->data()->id, $master_account)) {
     $checkC = $checkQ->count();
     if ($checkC < 1) {
         err($plugin_name.' is not installed!');
-        exit();
+        exit;
     }
     $check = $checkQ->first();
     if ($check->updates == '') {

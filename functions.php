@@ -176,6 +176,7 @@ function Coupons_expireCoupon($coupon = null, $all = false)
         $db->query('UPDATE coupons SET CouponExpirationDate = NOW() WHERE Coupon = ?', [$coupon]);
         if (!$db->error()) {
             logger($user->data()->id, 'Coupons_expireCoupon', "Expired Coupon {$coupon}");
+            $return['state'] = true;
             $return['data'] = $db->count();
 
             return $return;

@@ -326,7 +326,7 @@ if ($page == null && !isset($action)) {
     <?php } elseif ($page == 'redeemed') { ?>
       <h1>Congrats! &#129395;</h1>
       <h5>You've redeemed the code!</h5>
-      <p>The rewards for redeemding this code will be applied shortly.</p>
+      <p>The rewards for redeeming this code will be applied shortly.</p>
     <?php } elseif ($page == 'dashboard') { ?>
       <?php if ($action == null) { ?>
         <h1>Coupons Dashboard</h1>

@@ -49,6 +49,10 @@ if (in_array($user->data()->id, $master_account)) {
         'SQL' => 'CREATE TABLE coupons_permissions( kCouponPermissionID int(11) UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT, fkCouponID int(11) UNSIGNED NOT NULL, fkPermissionID int(11) UNSIGNED NOT NULL)',
       ],
       [
+        'Description' => 'Create coupons_required_permissions table',
+        'SQL' => 'CREATE TABLE coupons_required_permissions( kCouponRequiredPermissionID int(11) UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT, fkCouponID int(11) UNSIGNED NOT NULL, fkPermissionID int(11) UNSIGNED NOT NULL)',
+      ],
+      [
         'Description' => 'Create coupons_rewards table',
         'SQL' => 'CREATE TABLE coupons_rewards( kCouponRewardID int(11) UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT, RewardGiven datetime NOT NULL DEFAULT CURRENT_TIMESTAMP(), RewardRevoked datetime NULL, RewardType varchar(255) NULL, RewardId varchar(255) NULL)',
       ],

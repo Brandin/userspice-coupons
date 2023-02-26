@@ -61,7 +61,7 @@ function Coupons_getCoupons($coupon = null)
     }
 
     if ($coupon == null) {
-        $db->query('SELECT c.* ,GROUP_CONCAT(cp.fkPermissionID) PermissionIds ,COUNT(DISTINCT ch.kCouponHistoryID) CouponUseCount FROM coupons c LEFT JOIN coupons_permissions cp ON cp.fkCouponID = c.kCouponID LEFT JOIN coupons_history ch on c.kCouponID = ch.fkCouponID GROUP BY c.kCouponID');
+        $db->query('SELECT c.* ,GROUP_CONCAT(cp.fkPermissionID) PermissionIds ,GROUP_CONCAT(crp.fkPermissionID) RequiredPermissionIds ,COUNT(DISTINCT ch.kCouponHistoryID) CouponUseCount FROM coupons c LEFT JOIN coupons_permissions cp ON cp.fkCouponID = c.kCouponID LEFT JOIN coupons_required_permissions crp ON crp.fkCouponID = c.kCouponID LEFT JOIN coupons_history ch on c.kCouponID = ch.fkCouponID GROUP BY c.kCouponID');
         if (!$db->error()) {
             if ($db->count() > 0) {
                 $return['state'] = true;
@@ -80,7 +80,7 @@ function Coupons_getCoupons($coupon = null)
             return $return;
         }
     } else {
-        $db->query('SELECT c.* ,GROUP_CONCAT(cp.fkPermissionID) PermissionIds ,COUNT(DISTINCT ch.kCouponHistoryID) CouponUseCount FROM coupons c LEFT JOIN coupons_permissions cp ON cp.fkCouponID = c.kCouponID LEFT JOIN coupons_history ch on c.kCouponID = ch.fkCouponID WHERE c.Coupon = ? GROUP BY c.kCouponID', [$coupon]);
+        $db->query('SELECT c.* ,GROUP_CONCAT(cp.fkPermissionID) PermissionIds , GROUP_CONCAT(crp.fkPermissionID) RequiredPermissionIds ,COUNT(DISTINCT ch.kCouponHistoryID) CouponUseCount FROM coupons c LEFT JOIN coupons_permissions cp ON cp.fkCouponID = c.kCouponID LEFT JOIN coupons_required_permissions crp ON crp.fkCouponID = c.kCouponID LEFT JOIN coupons_history ch on c.kCouponID = ch.fkCouponID WHERE c.Coupon = ? GROUP BY c.kCouponID', [$coupon]);
         if (!$db->error()) {
             $count = $db->count();
             if ($count == 1) {
@@ -214,14 +214,34 @@ function Coupons_validateCoupon($coupon)
         return $return;
     }
 
-    $db->query('SELECT c.*, GROUP_CONCAT(cp.fkPermissionID) PermissionIds FROM coupons c LEFT JOIN coupons_permissions cp ON cp.fkCouponID = c.kCouponID LEFT JOIN(SELECT fkCouponID, COUNT(ch.kCouponHistoryID) CouponUseCount FROM coupons_history ch GROUP BY ch.fkCouponID) cu ON cu.fkCouponID = c.kCouponID WHERE c.Coupon = ? AND(c.CouponExpirationDate IS NULL OR c.CouponExpirationDate > NOW()) AND (c.CouponUseLimit IS NULL OR cu.CouponUseCount IS NULL OR c.CouponUseLimit > cu.CouponUseCount)', [$coupon]);
+    $db->query('SELECT c.*, GROUP_CONCAT(cp.fkPermissionID) PermissionIds, GROUP_CONCAT(crp.fkPermissionID) RequiredPermissionIds FROM coupons c LEFT JOIN coupons_permissions cp ON cp.fkCouponID = c.kCouponID LEFT JOIN coupons_required_permissions crp ON crp.fkCouponID = c.kCouponID LEFT JOIN(SELECT fkCouponID, COUNT(ch.kCouponHistoryID) CouponUseCount FROM coupons_history ch GROUP BY ch.fkCouponID) cu ON cu.fkCouponID = c.kCouponID WHERE c.Coupon = ? AND (c.CouponExpirationDate IS NULL OR c.CouponExpirationDate > NOW()) AND (c.CouponUseLimit IS NULL OR cu.CouponUseCount IS NULL OR c.CouponUseLimit > cu.CouponUseCount)', [$coupon]);
     if (!$db->error()) {
         $count = $db->count();
         if ($count == 1) {
-            $return['state'] = true;
-            $return['data'] = $db->first();
+            $couponData = $db->first();
+            if ($couponData->kCouponID == null) {
+                $return['error'] = 'db_no_results';
 
-            return $return;
+                return $return;
+            }
+            $couponRequiredPermissions = explode(',', $couponData->RequiredPermissionIds);
+            if ($couponData->RequiredPermissionIds !== null && count($couponRequiredPermissions) > 0) {
+                if (hasPerm($couponRequiredPermissions, null, false)) {
+                    $return['state'] = true;
+                    $return['data'] = $couponData;
+
+                    return $return;
+                } else {
+                    $return['error'] = 'missing_permission';
+
+                    return $return;
+                }
+            } else {
+                $return['state'] = true;
+                $return['data'] = $couponData;
+
+                return $return;
+            }
         } elseif ($count > 1) {
             $return['error'] = 'db_too_many_results';
 

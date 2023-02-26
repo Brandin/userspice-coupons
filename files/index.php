@@ -114,7 +114,7 @@ if (isset($_POST) || $post_bypass) {
         $coupon_code = (Input::get('coupon_code') == '') ? null : Input::get('coupon_code');
         $coupon_type = (Input::get('coupon_type') == '') ? null : Input::get('coupon_type');
         $coupon_permissions = (Input::get('permissions') == '') ? null : Input::get('permissions');
-        dump($coupon_permissions);
+        $coupon_required_permissions = (Input::get('required_permissions') == '') ? null : Input::get('required_permissions');
         $coupon_use_limit = (Input::get('coupon_use_limit') == '') ? null : Input::get('coupon_use_limit');
         if ($coupon_use_limit != null && $coupon_use_limit < 0) {
             $errors[] = 'Coupon Use Limmit may not be less than 1';
@@ -193,6 +193,19 @@ if (isset($_POST) || $post_bypass) {
                                 logger($user->data()->id, 'Coupons', "Added Permission to Coupon {$coupon_code}", json_encode(['DATA' => $perm_fields]));
                             } else {
                                 logger($user->data()->id, 'Coupons', "Failed to add permission to Coupon {$coupon_code}", json_encode(['DATA' => $perm_fields]));
+                            }
+                        }
+
+                        foreach ($coupon_required_permissions as $coupon_required_permission) {
+                            $req_fields = [
+                              'fkCouponID' => $coupon_id,
+                              'fkPermissionID' => $coupon_required_permission,
+                            ];
+                            $db->insert('coupons_required_permissions', $req_fields);
+                            if (!$db->error()) {
+                                logger($user->data()->id, 'Coupons', "Added Required Permission to Coupon {$coupon_code}", json_encode(['DATA' => $req_fields]));
+                            } else {
+                                logger($user->data()->id, 'Coupons', "Failed to add required permission to Coupon {$coupon_code}", json_encode(['DATA' => $req_fields]));
                             }
                         }
 
@@ -436,10 +449,34 @@ if ($page == null && !isset($action)) {
             <input type="number" class="form-control" min="1" name="coupon_create_amount" id="coupon_create_amount" placeholder="Leave blank if you are not generating multiple" <?php if (!$form_valid) {?>value="<?php echo $coupon_create_amount ?? null; ?>"<?php } ?> />
 
             <br>
-            <button type="button" class="btn btn-primary btn-md" data-state="off" id="toggle_permissions">Toggle Permissions: ON (Currently OFF)</button>
+            <button type="button" class="btn btn-primary btn-md" data-state="off" id="toggle_required_permissions">Toggle Required Permissions: Show (Currently Hidden)</button>
+
+            <br>
+            <div id="required_permissions" class="required_permissions row hidden">
+              <div class="col-xs-12">
+                <br>
+                <p>The Required Permissions feature allows you to restrict the use of a coupon to only users who have the required permissions (any). If you do not want to restrict the use of a coupon, leave this section blank.</p>
+              </div>
+              <?php $permissions = fetchAllPermissions();
+        foreach ($permissions as $perm) { ?>
+                <div class="col col-md-4 col-xs-12">
+                  <label>
+                    <input type="checkbox" class="required_permissions" name="required_permissions[]" id="required_permissions[]" value="<?php echo $perm->id; ?>" />
+                    <?php echo $perm->name; ?>
+                  </label>
+                </div>
+              <?php } ?>
+            </div>
+
+                        <br>
+            <button type="button" class="btn btn-primary btn-md" data-state="off" id="toggle_permissions">Toggle Redemption Permissions: Show (Currently Hidden)</button>
 
             <br>
             <div id="permissions" class="permissions row hidden">
+              <div class="col-xs-12">
+                <br>
+                <p>The Redemption Permissions feature allows you to select permissions that will be granted to a user when they redeem a coupon. If you do not want to grant any permissions, leave this section blank.</p>
+              </div>
               <?php $permissions = fetchAllPermissions();
         foreach ($permissions as $perm) { ?>
                 <div class="col col-md-4 col-xs-12">
@@ -509,10 +546,32 @@ if ($page == null && !isset($action)) {
     $('button#toggle_permissions').click(function() {
       btn = $(this)
       state = btn.attr('data-state');
-      on_text = 'Toggle Permissions: OFF (Currently ON)'
-      off_text = 'Toggle Permissions: ON (Currently OFF)'
+      on_text = 'Toggle Permissions: Hide (Currently Shown)'
+      off_text = 'Toggle Permissions: Show (Currently Hidden)'
       perm_div = $('div#permissions')
       perm_checkboxes = $('input:checkbox.permissions')
+
+      if(state == 'off') {
+        btn.text(on_text)
+        btn.attr('data-state', 'on')
+        perm_div.removeClass('hidden')
+      } else if(state == 'on') {
+        btn.text(off_text)
+        btn.attr('data-state', 'off')
+        perm_div.addClass('hidden')
+        perm_checkboxes.prop('checked', false)
+      }
+    })
+  })
+
+  $(function () {
+    $('button#toggle_required_permissions').click(function() {
+      btn = $(this)
+      state = btn.attr('data-state');
+      on_text = 'Toggle Permissions: Hide (Currently Shown)'
+      off_text = 'Toggle Permissions: Show (Currently Hidden)'
+      perm_div = $('div#required_permissions')
+      perm_checkboxes = $('input:checkbox.required_permissions')
 
       if(state == 'off') {
         btn.text(on_text)

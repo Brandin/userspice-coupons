@@ -6,12 +6,16 @@ if (in_array($user->data()->id, $master_account)) {
     include 'plugin_info.php';
 
     $coupons_dir = "{$abs_us_root}{$us_url_root}coupons/";
-    $files = array_diff(scandir($coupons_dir), ['..', '.']);
-    foreach ($files as $file) {
-        if (unlink("{$coupons_dir}{$file}")) {
-            logger($user->data()->id, 'Coupons', "[UNINSTALL] [FILES] [SUCCESS] Removed {$file}");
-        } else {
-            logger($user->data()->id, 'Coupons', "[UNINSTALL] [FILES] [ERROR] Failed to Remove {$file}");
+    if (!is_dir($coupons_dir)) {
+        logger($user->data()->id, 'Coupons', '[UNINSTALL] [FILES] [ERROR] Coupons Directory does not exist');
+    } else {
+        $files = array_diff(scandir($coupons_dir), ['..', '.']);
+        foreach ($files as $file) {
+            if (unlink("{$coupons_dir}{$file}")) {
+                logger($user->data()->id, 'Coupons', "[UNINSTALL] [FILES] [SUCCESS] Removed {$file}");
+            } else {
+                logger($user->data()->id, 'Coupons', "[UNINSTALL] [FILES] [ERROR] Failed to Remove {$file}");
+            }
         }
     }
 

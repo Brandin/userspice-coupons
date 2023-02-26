@@ -40,6 +40,15 @@ if (!function_exists('parseUrl')) {
     }
 }
 
+if (!function_exists('Coupons_onCouponRedeem')) {
+    function Coupons_onCouponRedeem($couponData)
+    {
+        // This function is called when a coupon is redeemed
+        // You should not edit it in this file, but rather add it to your custom_functions.php file in your usersc folder
+        // You can use it for any logic you want before we display the coupon success page
+    }
+}
+
 function Coupons_getCoupons($coupon = null)
 {
     global $user, $db;
